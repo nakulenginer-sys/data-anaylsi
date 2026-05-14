@@ -1,0 +1,1715 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>NEXUS AI · Analytics Suite</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Orbitron:wght@400;700;900&family=JetBrains+Mono:wght@300;400;500&display=swap" rel="stylesheet"/>
+<style>
+:root{
+  --neon-cyan:#00f5ff;
+  --neon-purple:#b44fff;
+  --neon-green:#00ff88;
+  --neon-orange:#ff6b35;
+  --bg-dark:#030712;
+  --bg-card:rgba(255,255,255,0.03);
+  --border-glow:rgba(0,245,255,0.15);
+  --text-dim:#6b7280;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+html{scroll-behavior:smooth;}
+body{font-family:'Space Grotesk',sans-serif;background:var(--bg-dark);color:#e2e8f0;overflow:hidden;}
+::-webkit-scrollbar{width:4px;}
+::-webkit-scrollbar-track{background:#0a0a0f;}
+::-webkit-scrollbar-thumb{background:linear-gradient(var(--neon-cyan),var(--neon-purple));border-radius:2px;}
+
+/* ── CANVAS BG ── */
+#bgCanvas{position:fixed;top:0;left:0;width:100%;height:100%;z-index:0;pointer-events:none;}
+
+/* ── LOGIN ── */
+#loginPage{
+  position:fixed;inset:0;z-index:100;
+  display:flex;align-items:center;justify-content:center;
+  background:radial-gradient(ellipse at 20% 50%,rgba(0,245,255,0.08) 0%,transparent 60%),
+             radial-gradient(ellipse at 80% 20%,rgba(180,79,255,0.08) 0%,transparent 60%),
+             var(--bg-dark);
+}
+.login-orb{
+  position:absolute;border-radius:50%;filter:blur(80px);animation:orbFloat 6s ease-in-out infinite;
+}
+.orb1{width:400px;height:400px;background:rgba(0,245,255,0.12);top:-100px;left:-100px;animation-delay:0s;}
+.orb2{width:500px;height:500px;background:rgba(180,79,255,0.10);bottom:-150px;right:-150px;animation-delay:3s;}
+@keyframes orbFloat{0%,100%{transform:translateY(0) scale(1);}50%{transform:translateY(-30px) scale(1.05);}}
+
+.login-card{
+  position:relative;z-index:10;
+  width:440px;padding:48px;border-radius:28px;
+  background:rgba(255,255,255,0.03);
+  backdrop-filter:blur(40px);
+  border:1px solid rgba(0,245,255,0.12);
+  box-shadow:0 0 80px rgba(0,245,255,0.06),inset 0 1px 0 rgba(255,255,255,0.06);
+  animation:cardReveal 1s cubic-bezier(0.16,1,0.3,1) both;
+}
+@keyframes cardReveal{from{opacity:0;transform:translateY(40px) scale(0.96);}to{opacity:1;transform:translateY(0) scale(1);}}
+
+.login-badge{
+  display:inline-flex;align-items:center;gap:8px;
+  padding:6px 16px;border-radius:999px;
+  background:rgba(0,245,255,0.08);border:1px solid rgba(0,245,255,0.2);
+  font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--neon-cyan);
+  margin-bottom:28px;letter-spacing:0.1em;
+}
+.badge-dot{width:6px;height:6px;border-radius:50%;background:var(--neon-cyan);animation:pulse 2s infinite;}
+@keyframes pulse{0%,100%{opacity:1;box-shadow:0 0 0 0 rgba(0,245,255,0.4);}50%{opacity:0.7;box-shadow:0 0 0 6px rgba(0,245,255,0);}}
+
+.login-title{
+  font-family:'Orbitron',monospace;font-size:36px;font-weight:900;
+  background:linear-gradient(135deg,#fff 0%,var(--neon-cyan) 50%,var(--neon-purple) 100%);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+  margin-bottom:8px;line-height:1.1;
+}
+.login-sub{color:var(--text-dim);font-size:14px;margin-bottom:36px;font-weight:300;}
+
+.login-input{
+  width:100%;padding:16px 20px;margin-bottom:16px;
+  background:rgba(0,0,0,0.4);border:1px solid rgba(255,255,255,0.06);
+  border-radius:14px;color:#fff;font-family:'Space Grotesk',sans-serif;font-size:14px;
+  transition:all 0.3s;outline:none;
+}
+.login-input:focus{border-color:rgba(0,245,255,0.4);box-shadow:0 0 0 3px rgba(0,245,255,0.08),0 0 20px rgba(0,245,255,0.1);}
+.login-input::placeholder{color:rgba(255,255,255,0.25);}
+
+.login-btn{
+  width:100%;padding:17px;border:none;border-radius:14px;
+  background:linear-gradient(135deg,var(--neon-cyan),var(--neon-purple));
+  color:#000;font-weight:700;font-size:15px;font-family:'Space Grotesk',sans-serif;
+  cursor:pointer;letter-spacing:0.05em;transition:all 0.3s;position:relative;overflow:hidden;
+}
+.login-btn::before{
+  content:'';position:absolute;inset:0;
+  background:linear-gradient(135deg,rgba(255,255,255,0.2),transparent);
+  opacity:0;transition:opacity 0.3s;
+}
+.login-btn:hover::before{opacity:1;}
+.login-btn:hover{transform:translateY(-2px);box-shadow:0 8px 30px rgba(0,245,255,0.4);}
+.login-btn:active{transform:translateY(0);}
+
+.login-divider{display:flex;align-items:center;gap:16px;margin:20px 0;color:var(--text-dim);font-size:12px;}
+.login-divider::before,.login-divider::after{content:'';flex:1;height:1px;background:rgba(255,255,255,0.06);}
+
+.demo-btn{
+  width:100%;padding:14px;border:1px solid rgba(255,255,255,0.08);border-radius:14px;
+  background:transparent;color:rgba(255,255,255,0.5);font-size:13px;
+  font-family:'Space Grotesk',sans-serif;cursor:pointer;transition:all 0.3s;
+}
+.demo-btn:hover{border-color:rgba(0,245,255,0.3);color:var(--neon-cyan);background:rgba(0,245,255,0.04);}
+
+/* ── DASHBOARD ── */
+#dashboard{position:fixed;inset:0;z-index:50;display:flex;opacity:0;pointer-events:none;transition:opacity 0.5s;}
+#dashboard.active{opacity:1;pointer-events:all;}
+
+/* ── SIDEBAR ── */
+.sidebar{
+  width:72px;min-height:100vh;
+  background:rgba(0,0,0,0.6);backdrop-filter:blur(30px);
+  border-right:1px solid rgba(255,255,255,0.04);
+  display:flex;flex-direction:column;align-items:center;
+  padding:20px 0;gap:8px;z-index:10;
+  transition:width 0.4s cubic-bezier(0.16,1,0.3,1);overflow:hidden;position:relative;
+}
+.sidebar:hover{width:240px;}
+.sidebar:hover .nav-label{opacity:1;transform:translateX(0);}
+.sidebar:hover .sidebar-logo-text{opacity:1;max-width:160px;}
+
+.sidebar-logo{
+  display:flex;align-items:center;gap:12px;
+  padding:0 16px;margin-bottom:16px;min-height:48px;
+}
+.sidebar-logo-icon{
+  width:40px;height:40px;border-radius:12px;flex-shrink:0;
+  background:linear-gradient(135deg,var(--neon-cyan),var(--neon-purple));
+  display:flex;align-items:center;justify-content:center;
+  font-family:'Orbitron',monospace;font-size:14px;font-weight:900;color:#000;
+}
+.sidebar-logo-text{
+  font-family:'Orbitron',monospace;font-size:14px;font-weight:700;
+  color:var(--neon-cyan);opacity:0;max-width:0;overflow:hidden;
+  transition:all 0.4s;white-space:nowrap;
+}
+
+.nav-item{
+  display:flex;align-items:center;gap:14px;
+  width:calc(100% - 16px);padding:12px 16px;border-radius:12px;
+  cursor:pointer;transition:all 0.25s;position:relative;
+  border:1px solid transparent;
+}
+.nav-item:hover{background:rgba(0,245,255,0.06);border-color:rgba(0,245,255,0.1);}
+.nav-item.active{background:rgba(0,245,255,0.1);border-color:rgba(0,245,255,0.2);}
+.nav-item.active .nav-icon{color:var(--neon-cyan);}
+.nav-item.active .nav-label{color:var(--neon-cyan);}
+
+.nav-icon{font-size:20px;flex-shrink:0;width:24px;text-align:center;transition:all 0.25s;}
+.nav-label{
+  font-size:13px;font-weight:500;color:rgba(255,255,255,0.6);
+  opacity:0;transform:translateX(-10px);
+  transition:all 0.3s;white-space:nowrap;
+}
+.nav-active-bar{
+  position:absolute;right:-1px;top:25%;bottom:25%;
+  width:2px;border-radius:2px;
+  background:var(--neon-cyan);opacity:0;transition:opacity 0.25s;
+}
+.nav-item.active .nav-active-bar{opacity:1;}
+
+.sidebar-bottom{margin-top:auto;border-top:1px solid rgba(255,255,255,0.04);padding-top:12px;width:100%;}
+
+/* ── MAIN ── */
+.main-content{flex:1;display:flex;flex-direction:column;overflow:hidden;position:relative;}
+
+/* ── NAVBAR ── */
+.topbar{
+  height:64px;display:flex;align-items:center;justify-content:space-between;
+  padding:0 28px;
+  background:rgba(0,0,0,0.4);backdrop-filter:blur(20px);
+  border-bottom:1px solid rgba(255,255,255,0.04);flex-shrink:0;
+}
+.topbar-search{
+  display:flex;align-items:center;gap:10px;
+  background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.06);
+  border-radius:10px;padding:8px 16px;width:280px;transition:all 0.3s;
+}
+.topbar-search:focus-within{border-color:rgba(0,245,255,0.3);background:rgba(0,245,255,0.04);}
+.topbar-search input{background:none;border:none;outline:none;color:#fff;font-size:13px;font-family:'Space Grotesk',sans-serif;width:100%;}
+.topbar-search input::placeholder{color:rgba(255,255,255,0.3);}
+
+.topbar-right{display:flex;align-items:center;gap:16px;}
+
+.notif-btn{
+  position:relative;width:38px;height:38px;border-radius:10px;
+  background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.06);
+  cursor:pointer;display:flex;align-items:center;justify-content:center;
+  font-size:16px;transition:all 0.25s;
+}
+.notif-btn:hover{background:rgba(0,245,255,0.08);border-color:rgba(0,245,255,0.2);}
+.notif-dot{
+  position:absolute;top:8px;right:8px;
+  width:7px;height:7px;border-radius:50%;background:var(--neon-cyan);
+  animation:pulse 2s infinite;border:1.5px solid var(--bg-dark);
+}
+
+.ai-topbtn{
+  display:flex;align-items:center;gap:8px;
+  padding:8px 16px;border-radius:10px;
+  background:rgba(0,245,255,0.08);border:1px solid rgba(0,245,255,0.2);
+  color:var(--neon-cyan);font-size:13px;font-weight:600;cursor:pointer;
+  transition:all 0.25s;font-family:'Space Grotesk',sans-serif;
+}
+.ai-topbtn:hover{background:rgba(0,245,255,0.15);box-shadow:0 0 20px rgba(0,245,255,0.15);}
+
+.profile-pill{
+  display:flex;align-items:center;gap:10px;
+  padding:6px 14px 6px 6px;border-radius:999px;
+  background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.06);
+  cursor:pointer;transition:all 0.25s;
+}
+.profile-pill:hover{border-color:rgba(0,245,255,0.2);}
+.profile-avatar{
+  width:32px;height:32px;border-radius:50%;
+  background:linear-gradient(135deg,var(--neon-cyan),var(--neon-purple));
+  display:flex;align-items:center;justify-content:center;
+  font-weight:700;font-size:12px;color:#000;overflow:hidden;
+}
+.profile-avatar img{width:100%;height:100%;object-fit:cover;}
+.profile-name{font-size:13px;font-weight:600;}
+.profile-role{font-size:11px;color:var(--text-dim);}
+
+/* ── PAGE CONTENT ── */
+.page-content{flex:1;overflow-y:auto;padding:28px;}
+
+/* ── SECTION PAGES ── */
+.page-section{display:none;}
+.page-section.active{display:block;}
+
+/* ── KPI CARDS ── */
+.kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:24px;}
+.kpi-card{
+  padding:24px;border-radius:20px;
+  background:var(--bg-card);backdrop-filter:blur(20px);
+  border:1px solid rgba(255,255,255,0.05);
+  cursor:pointer;transition:all 0.3s;position:relative;overflow:hidden;
+}
+.kpi-card::before{
+  content:'';position:absolute;inset:0;
+  background:linear-gradient(135deg,transparent,rgba(0,245,255,0.03));
+  opacity:0;transition:opacity 0.3s;
+}
+.kpi-card:hover::before{opacity:1;}
+.kpi-card:hover{transform:translateY(-4px);border-color:rgba(0,245,255,0.15);box-shadow:0 12px 40px rgba(0,0,0,0.3);}
+.kpi-icon{font-size:28px;margin-bottom:14px;}
+.kpi-label{font-size:11px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:var(--text-dim);margin-bottom:8px;}
+.kpi-value{font-family:'Orbitron',monospace;font-size:28px;font-weight:700;line-height:1;}
+.kpi-delta{font-size:12px;margin-top:8px;display:flex;align-items:center;gap:4px;}
+.delta-up{color:var(--neon-green);}
+.delta-down{color:#ff4d6a;}
+
+.kpi-sparkline{height:40px;margin-top:12px;position:relative;}
+
+/* ── CHART GRID ── */
+.chart-grid{display:grid;grid-template-columns:2fr 1fr;gap:16px;margin-bottom:20px;}
+.chart-box{
+  padding:24px;border-radius:20px;
+  background:var(--bg-card);backdrop-filter:blur(20px);
+  border:1px solid rgba(255,255,255,0.05);
+  transition:all 0.3s;
+}
+.chart-box:hover{border-color:rgba(0,245,255,0.1);}
+.chart-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;}
+.chart-title{font-size:14px;font-weight:600;color:rgba(255,255,255,0.9);}
+.chart-badge{
+  padding:4px 10px;border-radius:999px;font-size:11px;font-family:'JetBrains Mono',monospace;
+  background:rgba(0,245,255,0.08);color:var(--neon-cyan);border:1px solid rgba(0,245,255,0.15);
+}
+canvas{max-height:260px;}
+
+/* ── UPLOAD ── */
+.upload-zone{
+  border:2px dashed rgba(0,245,255,0.2);border-radius:20px;
+  padding:48px;text-align:center;cursor:pointer;transition:all 0.3s;
+  background:rgba(0,245,255,0.02);position:relative;overflow:hidden;
+}
+.upload-zone:hover,.upload-zone.drag-over{
+  border-color:rgba(0,245,255,0.5);
+  background:rgba(0,245,255,0.05);
+  box-shadow:0 0 40px rgba(0,245,255,0.08) inset;
+}
+.upload-icon{font-size:48px;margin-bottom:16px;display:block;}
+.upload-title{font-size:18px;font-weight:600;margin-bottom:8px;}
+.upload-sub{font-size:13px;color:var(--text-dim);}
+.upload-formats{
+  display:inline-flex;gap:8px;margin-top:16px;
+}
+.format-tag{
+  padding:4px 12px;border-radius:999px;border:1px solid rgba(255,255,255,0.1);
+  font-size:11px;font-family:'JetBrains Mono',monospace;color:rgba(255,255,255,0.4);
+}
+
+/* ── DATA TABLE ── */
+.data-table-wrap{overflow-x:auto;border-radius:16px;border:1px solid rgba(255,255,255,0.05);}
+.data-table{width:100%;border-collapse:collapse;}
+.data-table th{
+  padding:12px 16px;font-size:11px;font-weight:600;letter-spacing:0.08em;
+  text-transform:uppercase;color:var(--text-dim);
+  background:rgba(255,255,255,0.02);border-bottom:1px solid rgba(255,255,255,0.05);
+  text-align:left;
+}
+.data-table td{
+  padding:12px 16px;font-size:13px;
+  border-bottom:1px solid rgba(255,255,255,0.03);
+  color:rgba(255,255,255,0.75);
+}
+.data-table tr:hover td{background:rgba(0,245,255,0.03);color:#fff;}
+.data-table tr:last-child td{border-bottom:none;}
+
+/* ── INSIGHTS ── */
+.insights-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;}
+.insight-card{
+  padding:20px;border-radius:16px;
+  background:var(--bg-card);border:1px solid rgba(255,255,255,0.05);
+  transition:all 0.3s;cursor:pointer;
+}
+.insight-card:hover{transform:translateY(-3px);border-color:rgba(0,245,255,0.15);}
+.insight-icon{font-size:24px;margin-bottom:12px;}
+.insight-title{font-size:13px;font-weight:600;margin-bottom:6px;}
+.insight-text{font-size:12px;color:var(--text-dim);line-height:1.6;}
+.insight-score{
+  margin-top:12px;display:flex;align-items:center;gap:8px;
+}
+.score-bar{flex:1;height:3px;border-radius:999px;background:rgba(255,255,255,0.06);overflow:hidden;}
+.score-fill{height:100%;border-radius:999px;background:linear-gradient(90deg,var(--neon-cyan),var(--neon-purple));}
+.score-val{font-size:11px;font-family:'JetBrains Mono',monospace;color:var(--neon-cyan);}
+
+/* ── AI CHATBOT ── */
+.chat-fab{
+  position:fixed;right:28px;bottom:28px;z-index:200;
+  width:56px;height:56px;border-radius:50%;border:none;
+  background:linear-gradient(135deg,var(--neon-cyan),var(--neon-purple));
+  cursor:pointer;display:flex;align-items:center;justify-content:center;
+  font-size:22px;box-shadow:0 0 30px rgba(0,245,255,0.3);
+  transition:all 0.3s;animation:fabPulse 3s infinite;
+}
+.chat-fab:hover{transform:scale(1.1);box-shadow:0 0 50px rgba(0,245,255,0.5);}
+@keyframes fabPulse{0%,100%{box-shadow:0 0 30px rgba(0,245,255,0.3);}50%{box-shadow:0 0 50px rgba(0,245,255,0.5),0 0 80px rgba(180,79,255,0.2);}}
+
+.chat-window{
+  position:fixed;right:28px;bottom:96px;z-index:200;
+  width:380px;height:520px;border-radius:24px;
+  background:rgba(5,8,22,0.95);backdrop-filter:blur(40px);
+  border:1px solid rgba(0,245,255,0.15);
+  box-shadow:0 20px 80px rgba(0,0,0,0.5),0 0 0 1px rgba(255,255,255,0.04);
+  display:flex;flex-direction:column;
+  transform:scale(0.8) translateY(20px);opacity:0;pointer-events:none;
+  transition:all 0.3s cubic-bezier(0.16,1,0.3,1);
+}
+.chat-window.open{transform:scale(1) translateY(0);opacity:1;pointer-events:all;}
+.chat-header{
+  padding:18px 20px;border-bottom:1px solid rgba(255,255,255,0.05);
+  display:flex;align-items:center;gap:12px;
+}
+.chat-avatar{
+  width:36px;height:36px;border-radius:50%;
+  background:linear-gradient(135deg,var(--neon-cyan),var(--neon-purple));
+  display:flex;align-items:center;justify-content:center;font-size:16px;
+  animation:fabPulse 3s infinite;
+}
+.chat-name{font-size:14px;font-weight:600;}
+.chat-status{font-size:11px;color:var(--neon-green);display:flex;align-items:center;gap:4px;}
+.chat-status::before{content:'';width:6px;height:6px;border-radius:50%;background:var(--neon-green);}
+
+.chat-messages{flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:12px;}
+.chat-msg{max-width:85%;animation:msgIn 0.3s ease;}
+@keyframes msgIn{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:translateY(0);}}
+.msg-user{align-self:flex-end;}
+.msg-ai{align-self:flex-start;}
+.msg-bubble{
+  padding:12px 16px;border-radius:16px;font-size:13px;line-height:1.5;
+}
+.msg-user .msg-bubble{
+  background:linear-gradient(135deg,rgba(0,245,255,0.15),rgba(180,79,255,0.1));
+  border:1px solid rgba(0,245,255,0.2);
+  border-bottom-right-radius:4px;
+}
+.msg-ai .msg-bubble{
+  background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.06);
+  border-bottom-left-radius:4px;color:rgba(255,255,255,0.85);
+}
+.typing-indicator{display:flex;gap:4px;padding:4px 0;}
+.typing-dot{width:6px;height:6px;border-radius:50%;background:var(--neon-cyan);animation:typingBounce 1.4s infinite;}
+.typing-dot:nth-child(2){animation-delay:0.2s;}
+.typing-dot:nth-child(3){animation-delay:0.4s;}
+@keyframes typingBounce{0%,100%{transform:translateY(0);opacity:0.4;}50%{transform:translateY(-6px);opacity:1;}}
+
+.chat-input-row{
+  padding:16px;border-top:1px solid rgba(255,255,255,0.05);
+  display:flex;gap:10px;align-items:center;
+}
+.chat-input{
+  flex:1;padding:11px 16px;border-radius:12px;
+  background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);
+  color:#fff;font-size:13px;font-family:'Space Grotesk',sans-serif;
+  outline:none;transition:all 0.25s;
+}
+.chat-input:focus{border-color:rgba(0,245,255,0.3);}
+.chat-input::placeholder{color:rgba(255,255,255,0.2);}
+.chat-send{
+  width:38px;height:38px;border-radius:10px;border:none;
+  background:linear-gradient(135deg,var(--neon-cyan),var(--neon-purple));
+  cursor:pointer;display:flex;align-items:center;justify-content:center;
+  font-size:15px;transition:all 0.25s;color:#000;
+}
+.chat-send:hover{transform:scale(1.05);}
+
+/* ── MODAL / TOAST ── */
+.toast{
+  position:fixed;top:24px;right:24px;z-index:500;
+  padding:14px 20px;border-radius:14px;
+  background:rgba(0,255,136,0.1);border:1px solid rgba(0,255,136,0.3);
+  backdrop-filter:blur(20px);font-size:13px;font-weight:500;
+  color:var(--neon-green);
+  transform:translateX(120%);transition:transform 0.4s cubic-bezier(0.16,1,0.3,1);
+  display:flex;align-items:center;gap:8px;
+}
+.toast.show{transform:translateX(0);}
+
+/* ── SECTION HEADERS ── */
+.section-header{margin-bottom:24px;}
+.section-title{font-size:22px;font-weight:700;margin-bottom:4px;}
+.section-sub{font-size:13px;color:var(--text-dim);}
+.section-divider{height:1px;background:linear-gradient(90deg,rgba(0,245,255,0.2),transparent);margin:20px 0;}
+
+/* ── TAG CHIP ── */
+.chip{
+  display:inline-flex;align-items:center;gap:6px;
+  padding:5px 12px;border-radius:999px;font-size:11px;font-weight:600;
+  letter-spacing:0.05em;border:1px solid;
+}
+.chip-cyan{background:rgba(0,245,255,0.08);color:var(--neon-cyan);border-color:rgba(0,245,255,0.2);}
+.chip-purple{background:rgba(180,79,255,0.08);color:var(--neon-purple);border-color:rgba(180,79,255,0.2);}
+.chip-green{background:rgba(0,255,136,0.08);color:var(--neon-green);border-color:rgba(0,255,136,0.2);}
+
+/* ── FORECASTING ── */
+.forecast-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:20px;}
+.forecast-stat{
+  padding:20px;border-radius:16px;
+  background:var(--bg-card);border:1px solid rgba(255,255,255,0.05);
+  text-align:center;
+}
+.forecast-stat-val{font-family:'Orbitron',monospace;font-size:24px;font-weight:700;color:var(--neon-cyan);}
+.forecast-stat-lbl{font-size:12px;color:var(--text-dim);margin-top:4px;}
+
+/* ── TEAM ── */
+.team-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;}
+.team-card{
+  padding:24px;border-radius:20px;
+  background:var(--bg-card);border:1px solid rgba(255,255,255,0.05);
+  text-align:center;transition:all 0.3s;cursor:pointer;
+}
+.team-card:hover{transform:translateY(-4px);border-color:rgba(0,245,255,0.15);}
+.team-avatar{
+  width:64px;height:64px;border-radius:50%;margin:0 auto 14px;
+  background:linear-gradient(135deg,var(--neon-cyan),var(--neon-purple));
+  display:flex;align-items:center;justify-content:center;
+  font-size:22px;font-weight:700;color:#000;overflow:hidden;border:2px solid rgba(0,245,255,0.2);
+}
+.team-avatar img{width:100%;height:100%;object-fit:cover;}
+.team-name{font-size:14px;font-weight:600;margin-bottom:4px;}
+.team-role{font-size:12px;color:var(--text-dim);margin-bottom:12px;}
+.online-badge{display:inline-flex;align-items:center;gap:5px;font-size:11px;color:var(--neon-green);}
+.online-badge::before{content:'';width:6px;height:6px;border-radius:50%;background:var(--neon-green);}
+
+/* ── SETTINGS ── */
+.settings-group{margin-bottom:28px;}
+.settings-label{font-size:11px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:var(--text-dim);margin-bottom:12px;}
+.settings-row{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:16px 20px;border-radius:14px;
+  background:var(--bg-card);border:1px solid rgba(255,255,255,0.05);
+  margin-bottom:8px;transition:all 0.25s;cursor:pointer;
+}
+.settings-row:hover{border-color:rgba(0,245,255,0.1);}
+.settings-row-left{display:flex;align-items:center;gap:14px;}
+.settings-row-icon{font-size:18px;}
+.settings-row-info{}
+.settings-row-name{font-size:13px;font-weight:600;}
+.settings-row-desc{font-size:11px;color:var(--text-dim);margin-top:2px;}
+
+.toggle{
+  width:44px;height:24px;border-radius:999px;
+  background:rgba(255,255,255,0.1);position:relative;cursor:pointer;
+  transition:all 0.3s;border:1px solid rgba(255,255,255,0.08);
+}
+.toggle.on{background:rgba(0,245,255,0.2);border-color:rgba(0,245,255,0.4);}
+.toggle::after{
+  content:'';position:absolute;top:3px;left:3px;
+  width:16px;height:16px;border-radius:50%;background:#fff;transition:all 0.3s;
+}
+.toggle.on::after{transform:translateX(20px);background:var(--neon-cyan);}
+
+/* ── LIVE FEED ── */
+.live-feed{max-height:320px;overflow-y:auto;}
+.feed-item{
+  display:flex;align-items:flex-start;gap:12px;
+  padding:12px 0;border-bottom:1px solid rgba(255,255,255,0.03);
+  animation:feedSlide 0.4s ease;
+}
+@keyframes feedSlide{from{opacity:0;transform:translateX(-10px);}to{opacity:1;transform:translateX(0);}}
+.feed-dot{width:8px;height:8px;border-radius:50%;margin-top:5px;flex-shrink:0;}
+.feed-text{font-size:12px;color:rgba(255,255,255,0.7);line-height:1.5;}
+.feed-time{font-size:10px;color:var(--text-dim);font-family:'JetBrains Mono',monospace;}
+
+/* ── PROGRESS ── */
+.progress-bar{height:6px;border-radius:999px;background:rgba(255,255,255,0.06);overflow:hidden;margin-top:8px;}
+.progress-fill{height:100%;border-radius:999px;background:linear-gradient(90deg,var(--neon-cyan),var(--neon-purple));transition:width 1s ease;}
+
+/* ── GRID HELPERS ── */
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+.three-col{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;}
+
+/* ── ANIMATED GRID BG ── */
+.animated-grid{
+  position:fixed;inset:0;pointer-events:none;z-index:0;
+  background-image:linear-gradient(rgba(0,245,255,0.02) 1px,transparent 1px),
+                   linear-gradient(90deg,rgba(0,245,255,0.02) 1px,transparent 1px);
+  background-size:60px 60px;
+  mask-image:radial-gradient(ellipse 80% 80% at 50% 50%,black,transparent);
+}
+
+/* ── LOADING SPINNER ── */
+.spinner{
+  width:20px;height:20px;border-radius:50%;
+  border:2px solid rgba(0,245,255,0.2);border-top-color:var(--neon-cyan);
+  animation:spin 0.8s linear infinite;
+}
+@keyframes spin{to{transform:rotate(360deg);}}
+
+/* ── NEON GLOW TEXT ── */
+.glow-text{text-shadow:0 0 20px rgba(0,245,255,0.5);}
+.purple-glow{text-shadow:0 0 20px rgba(180,79,255,0.5);}
+
+/* ── REPORTS ── */
+.report-card{
+  display:flex;align-items:center;gap:16px;
+  padding:18px 20px;border-radius:16px;
+  background:var(--bg-card);border:1px solid rgba(255,255,255,0.05);
+  margin-bottom:10px;cursor:pointer;transition:all 0.3s;
+}
+.report-card:hover{border-color:rgba(0,245,255,0.15);transform:translateX(4px);}
+.report-icon-wrap{
+  width:44px;height:44px;border-radius:12px;
+  background:rgba(0,245,255,0.08);border:1px solid rgba(0,245,255,0.15);
+  display:flex;align-items:center;justify-content:center;font-size:20px;
+}
+.report-info{flex:1;}
+.report-name{font-size:13px;font-weight:600;margin-bottom:3px;}
+.report-meta{font-size:11px;color:var(--text-dim);}
+.report-btn{
+  padding:7px 16px;border-radius:8px;font-size:12px;font-weight:600;
+  background:rgba(0,245,255,0.08);color:var(--neon-cyan);border:1px solid rgba(0,245,255,0.2);
+  cursor:pointer;transition:all 0.25s;font-family:'Space Grotesk',sans-serif;
+}
+.report-btn:hover{background:rgba(0,245,255,0.15);}
+
+/* Responsive */
+@media(max-width:768px){
+  .kpi-grid{grid-template-columns:repeat(2,1fr);}
+  .chart-grid{grid-template-columns:1fr;}
+  .insights-grid{grid-template-columns:1fr;}
+  .team-grid{grid-template-columns:repeat(2,1fr);}
+  .two-col,.three-col{grid-template-columns:1fr;}
+  .chat-window{width:calc(100vw - 56px);}
+}
+</style>
+</head>
+<body>
+
+<!-- Animated background grid -->
+<div class="animated-grid"></div>
+<canvas id="bgCanvas"></canvas>
+
+<!-- Toast notification -->
+<div class="toast" id="toast">✓ Action completed</div>
+
+<!-- ════════════════════════════════════
+     LOGIN PAGE
+════════════════════════════════════ -->
+<section id="loginPage">
+  <div class="login-orb orb1"></div>
+  <div class="login-orb orb2"></div>
+
+  <div class="login-card">
+    <div class="login-badge"><span class="badge-dot"></span> NEXUS AI v3.0 · ONLINE</div>
+    <h1 class="login-title">NEXUS AI</h1>
+    <p class="login-sub">Enterprise Analytics Intelligence Platform</p>
+
+    <input type="email" class="login-input" placeholder="your@email.com" value="nakul@nexus.ai"/>
+    <input type="password" class="login-input" placeholder="Password" value="••••••••••"/>
+
+    <button class="login-btn" id="loginBtn">
+      <span id="loginBtnText">Access Dashboard →</span>
+    </button>
+
+    <div class="login-divider">OR</div>
+    <button class="demo-btn" id="demoBtn">Continue as Demo User</button>
+
+    <p style="text-align:center;font-size:11px;color:#374151;margin-top:20px;">
+      NEXUS AI © 2024 · Enterprise Grade Security
+    </p>
+  </div>
+</section>
+
+<!-- ════════════════════════════════════
+     DASHBOARD
+════════════════════════════════════ -->
+<section id="dashboard">
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-logo">
+      <div class="sidebar-logo-icon">N</div>
+      <span class="sidebar-logo-text">NEXUS AI</span>
+    </div>
+
+    <div class="nav-item active" data-page="home" onclick="navigate('home',this)">
+      <span class="nav-icon">⬡</span>
+      <span class="nav-label">Dashboard</span>
+      <div class="nav-active-bar"></div>
+    </div>
+    <div class="nav-item" data-page="analytics" onclick="navigate('analytics',this)">
+      <span class="nav-icon">📈</span>
+      <span class="nav-label">Analytics</span>
+      <div class="nav-active-bar"></div>
+    </div>
+    <div class="nav-item" data-page="dataset" onclick="navigate('dataset',this)">
+      <span class="nav-icon">⬆</span>
+      <span class="nav-label">Dataset Upload</span>
+      <div class="nav-active-bar"></div>
+    </div>
+    <div class="nav-item" data-page="insights" onclick="navigate('insights',this)">
+      <span class="nav-icon">🧠</span>
+      <span class="nav-label">AI Insights</span>
+      <div class="nav-active-bar"></div>
+    </div>
+    <div class="nav-item" data-page="forecasting" onclick="navigate('forecasting',this)">
+      <span class="nav-icon">🔮</span>
+      <span class="nav-label">Forecasting</span>
+      <div class="nav-active-bar"></div>
+    </div>
+    <div class="nav-item" data-page="reports" onclick="navigate('reports',this)">
+      <span class="nav-icon">📋</span>
+      <span class="nav-label">Reports</span>
+      <div class="nav-active-bar"></div>
+    </div>
+    <div class="nav-item" data-page="team" onclick="navigate('team',this)">
+      <span class="nav-icon">👥</span>
+      <span class="nav-label">Team</span>
+      <div class="nav-active-bar"></div>
+    </div>
+
+    <div class="sidebar-bottom">
+      <div class="nav-item" data-page="settings" onclick="navigate('settings',this)">
+        <span class="nav-icon">⚙</span>
+        <span class="nav-label">Settings</span>
+        <div class="nav-active-bar"></div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- MAIN CONTENT -->
+  <div class="main-content">
+
+    <!-- TOPBAR -->
+    <nav class="topbar">
+      <div class="topbar-search">
+        <span style="color:var(--text-dim);font-size:14px;">🔍</span>
+        <input type="text" placeholder="Search metrics, insights, datasets..." id="searchInput"/>
+      </div>
+      <div class="topbar-right">
+        <button class="notif-btn" onclick="showToast('3 new AI insights detected!')">
+          🔔<span class="notif-dot"></span>
+        </button>
+        <button class="ai-topbtn" onclick="toggleChat()">⚡ AI Assistant</button>
+        <div class="profile-pill" onclick="navigate('settings',document.querySelector('[data-page=settings]'))">
+          <div class="profile-avatar">
+            <img src="WhatsApp Image 2026-05-13 at 12.17.53 PM.jpeg" alt="Profile"/>
+          </div>
+          <div>
+            <div class="profile-name">Nakul Sharma</div>
+            <div class="profile-role">Data Scientist</div>
+          </div>
+        </div>
+      </div>
+    </nav>
+
+    <!-- PAGE CONTENT -->
+    <div class="page-content">
+
+      <!-- ── HOME DASHBOARD ── -->
+      <div id="page-home" class="page-section active">
+        <div class="section-header">
+          <div style="display:flex;align-items:center;justify-content:space-between;">
+            <div>
+              <h1 class="section-title">Good morning, Nakul 👋</h1>
+              <p class="section-sub">Here's what's happening with your analytics today.</p>
+            </div>
+            <div style="display:flex;gap:8px;">
+              <span class="chip chip-cyan">Live</span>
+              <span class="chip chip-green">All systems operational</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- KPI Cards -->
+        <div class="kpi-grid">
+          <div class="kpi-card" onclick="showKPIDetail('Revenue','$248,320','↑ 18.4% from last month. Driven by Q4 enterprise deals and new customer acquisitions. Top regions: US (42%), EU (31%).')">
+            <div class="kpi-icon">💰</div>
+            <div class="kpi-label">Total Revenue</div>
+            <div class="kpi-value" style="color:var(--neon-cyan);">$248K</div>
+            <div class="kpi-delta delta-up">↑ +18.4% vs last month</div>
+            <canvas class="kpi-sparkline" id="spark1"></canvas>
+          </div>
+          <div class="kpi-card" onclick="showKPIDetail('Active Users','18,240','↑ 24% growth. DAU/MAU ratio is 0.68, significantly above industry average of 0.45. Retention improving.')">
+            <div class="kpi-icon">👤</div>
+            <div class="kpi-label">Active Users</div>
+            <div class="kpi-value" style="color:var(--neon-purple);">18.2K</div>
+            <div class="kpi-delta delta-up">↑ +24% vs last month</div>
+            <canvas class="kpi-sparkline" id="spark2"></canvas>
+          </div>
+          <div class="kpi-card" onclick="showKPIDetail('Conversion Rate','3.8%','↑ +0.6pp improvement. Funnel optimization reduced drop-off. Checkout flow A/B test resulted in +12% improvement.')">
+            <div class="kpi-icon">🎯</div>
+            <div class="kpi-label">Conversion Rate</div>
+            <div class="kpi-value" style="color:var(--neon-green);">3.8%</div>
+            <div class="kpi-delta delta-up">↑ +0.6pp improvement</div>
+            <canvas class="kpi-sparkline" id="spark3"></canvas>
+          </div>
+          <div class="kpi-card" onclick="showKPIDetail('AI Score','98/100','Exceptional model performance. Prediction accuracy: 96.2%. Anomaly detection rate: 99.1%. 14 new insights generated today.')">
+            <div class="kpi-icon">🤖</div>
+            <div class="kpi-label">AI Score</div>
+            <div class="kpi-value" style="color:var(--neon-orange);">98</div>
+            <div class="kpi-delta delta-up">↑ Peak performance</div>
+            <canvas class="kpi-sparkline" id="spark4"></canvas>
+          </div>
+        </div>
+
+        <!-- Charts Row -->
+        <div class="chart-grid">
+          <div class="chart-box">
+            <div class="chart-header">
+              <span class="chart-title">Revenue Analytics · 2024</span>
+              <span class="chart-badge">LIVE</span>
+            </div>
+            <canvas id="mainLineChart"></canvas>
+          </div>
+          <div class="chart-box">
+            <div class="chart-header">
+              <span class="chart-title">Revenue Distribution</span>
+              <span class="chart-badge">AI</span>
+            </div>
+            <canvas id="mainDonutChart"></canvas>
+          </div>
+        </div>
+
+        <!-- Bottom Row -->
+        <div class="two-col">
+          <div class="chart-box">
+            <div class="chart-header">
+              <span class="chart-title">User Growth by Channel</span>
+            </div>
+            <canvas id="barChart"></canvas>
+          </div>
+          <div class="chart-box">
+            <div class="chart-header">
+              <span class="chart-title">Live Activity Feed</span>
+              <span class="chip chip-green" style="font-size:10px;">● LIVE</span>
+            </div>
+            <div class="live-feed" id="liveFeed"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── ANALYTICS ── -->
+      <div id="page-analytics" class="page-section">
+        <div class="section-header">
+          <h1 class="section-title">Analytics Workspace</h1>
+          <p class="section-sub">Deep-dive into your data with AI-powered analysis.</p>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;">
+          <div class="chart-box">
+            <div class="chart-header"><span class="chart-title">Monthly Trend Analysis</span><span class="chart-badge">PREDICTIVE</span></div>
+            <canvas id="analyticsTrend"></canvas>
+          </div>
+          <div class="chart-box">
+            <div class="chart-header"><span class="chart-title">Performance Radar</span><span class="chart-badge">AI</span></div>
+            <canvas id="radarChart"></canvas>
+          </div>
+        </div>
+        <div class="chart-box">
+          <div class="chart-header"><span class="chart-title">Scatter Analysis · Revenue vs Users</span></div>
+          <canvas id="scatterChart" style="max-height:200px;"></canvas>
+        </div>
+      </div>
+
+      <!-- ── DATASET UPLOAD ── -->
+      <div id="page-dataset" class="page-section">
+        <div class="section-header">
+          <h1 class="section-title">Dataset Manager</h1>
+          <p class="section-sub">Upload and analyze your Excel or CSV datasets instantly.</p>
+        </div>
+
+        <div class="upload-zone" id="uploadZone" onclick="document.getElementById('fileInput').click()">
+          <input type="file" id="fileInput" accept=".xlsx,.csv,.xls" style="display:none;" onchange="handleFile(event)"/>
+          <span class="upload-icon">📂</span>
+          <div class="upload-title">Drop your dataset here</div>
+          <div class="upload-sub">Drag & drop or click to browse your files</div>
+          <div class="upload-formats">
+            <span class="format-tag">.XLSX</span>
+            <span class="format-tag">.CSV</span>
+            <span class="format-tag">.XLS</span>
+          </div>
+        </div>
+
+        <div id="dataPreviewSection" style="display:none;margin-top:24px;">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+            <h2 style="font-size:16px;font-weight:600;" id="datasetTitle">Dataset Preview</h2>
+            <div style="display:flex;gap:8px;" id="dataStats"></div>
+          </div>
+          <div class="data-table-wrap" id="tableContainer"></div>
+
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:20px;">
+            <div class="chart-box">
+              <div class="chart-header"><span class="chart-title">Auto-Generated · Line Chart</span><span class="chart-badge">AI</span></div>
+              <canvas id="uploadLineChart"></canvas>
+            </div>
+            <div class="chart-box">
+              <div class="chart-header"><span class="chart-title">Auto-Generated · Bar Chart</span><span class="chart-badge">AI</span></div>
+              <canvas id="uploadBarChart"></canvas>
+            </div>
+          </div>
+
+          <div class="chart-box" style="margin-top:16px;">
+            <div class="chart-header"><span class="chart-title">Full Column Distribution</span></div>
+            <canvas id="uploadAreaChart" style="max-height:180px;"></canvas>
+          </div>
+
+          <div style="margin-top:20px;padding:20px;border-radius:16px;background:rgba(0,245,255,0.04);border:1px solid rgba(0,245,255,0.1);">
+            <div style="font-size:13px;font-weight:600;color:var(--neon-cyan);margin-bottom:12px;">🧠 AI Dataset Summary</div>
+            <div id="aiSummary" style="font-size:13px;color:rgba(255,255,255,0.7);line-height:1.8;"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── AI INSIGHTS ── -->
+      <div id="page-insights" class="page-section">
+        <div class="section-header">
+          <h1 class="section-title">AI Insights Engine</h1>
+          <p class="section-sub">Real-time anomaly detection, trend analysis, and business intelligence.</p>
+        </div>
+        <div class="insights-grid" id="insightsGrid">
+          <!-- populated by JS -->
+        </div>
+        <div class="section-divider"></div>
+        <div class="chart-box" style="margin-top:16px;">
+          <div class="chart-header"><span class="chart-title">AI Confidence Over Time</span><span class="chart-badge">NEURAL</span></div>
+          <canvas id="confidenceChart"></canvas>
+        </div>
+      </div>
+
+      <!-- ── FORECASTING ── -->
+      <div id="page-forecasting" class="page-section">
+        <div class="section-header">
+          <h1 class="section-title">Forecasting Studio</h1>
+          <p class="section-sub">ML-powered predictions and scenario modeling.</p>
+        </div>
+        <div class="forecast-stats">
+          <div class="forecast-stat">
+            <div class="forecast-stat-val">$312K</div>
+            <div class="forecast-stat-lbl">Projected Revenue (30d)</div>
+          </div>
+          <div class="forecast-stat">
+            <div class="forecast-stat-val">+28%</div>
+            <div class="forecast-stat-lbl">User Growth Forecast</div>
+          </div>
+          <div class="forecast-stat">
+            <div class="forecast-stat-val">94.2%</div>
+            <div class="forecast-stat-lbl">Model Confidence</div>
+          </div>
+        </div>
+        <div class="chart-box">
+          <div class="chart-header"><span class="chart-title">Revenue Forecast · Next 6 Months</span><span class="chart-badge">ML MODEL</span></div>
+          <canvas id="forecastChart"></canvas>
+        </div>
+        <div class="two-col" style="margin-top:16px;">
+          <div class="chart-box">
+            <div class="chart-header"><span class="chart-title">Growth Scenarios</span></div>
+            <canvas id="scenarioChart"></canvas>
+          </div>
+          <div class="chart-box">
+            <div style="font-size:13px;font-weight:600;margin-bottom:16px;">Risk Assessment</div>
+            <div style="display:flex;flex-direction:column;gap:14px;">
+              <div><div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:6px;"><span>Market Risk</span><span style="color:var(--neon-orange);">Medium · 34%</span></div><div class="progress-bar"><div class="progress-fill" style="width:34%;background:linear-gradient(90deg,#ff6b35,#ff9500);"></div></div></div>
+              <div><div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:6px;"><span>Operational Risk</span><span style="color:var(--neon-green);">Low · 18%</span></div><div class="progress-bar"><div class="progress-fill" style="width:18%;background:linear-gradient(90deg,var(--neon-green),#00d4aa);"></div></div></div>
+              <div><div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:6px;"><span>Tech Risk</span><span style="color:var(--neon-cyan);">Low · 12%</span></div><div class="progress-bar"><div class="progress-fill" style="width:12%;"></div></div></div>
+              <div><div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:6px;"><span>Competitive Risk</span><span style="color:var(--neon-purple);">High · 61%</span></div><div class="progress-bar"><div class="progress-fill" style="width:61%;background:linear-gradient(90deg,var(--neon-purple),#ff4d9f);"></div></div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── REPORTS ── -->
+      <div id="page-reports" class="page-section">
+        <div class="section-header">
+          <div style="display:flex;justify-content:space-between;align-items:center;">
+            <div>
+              <h1 class="section-title">Reports Center</h1>
+              <p class="section-sub">Generate, export, and share analytics reports.</p>
+            </div>
+            <button onclick="showToast('Generating new report...')" style="padding:10px 20px;border-radius:12px;background:linear-gradient(135deg,var(--neon-cyan),var(--neon-purple));color:#000;font-weight:700;font-size:13px;border:none;cursor:pointer;">+ New Report</button>
+          </div>
+        </div>
+        <div id="reportsList"></div>
+      </div>
+
+      <!-- ── TEAM ── -->
+      <div id="page-team" class="page-section">
+        <div class="section-header">
+          <h1 class="section-title">Team Workspace</h1>
+          <p class="section-sub">Collaborate with your analytics team in real-time.</p>
+        </div>
+        <div class="team-grid" id="teamGrid"></div>
+        <div class="section-divider"></div>
+        <div class="two-col">
+          <div class="chart-box">
+            <div class="chart-header"><span class="chart-title">Team Activity</span></div>
+            <canvas id="teamChart"></canvas>
+          </div>
+          <div class="chart-box">
+            <div style="font-size:13px;font-weight:600;margin-bottom:16px;">Recent Collaboration</div>
+            <div id="collabFeed"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── SETTINGS ── -->
+      <div id="page-settings" class="page-section">
+        <div class="section-header">
+          <h1 class="section-title">Settings & Profile</h1>
+          <p class="section-sub">Manage your account, preferences, and integrations.</p>
+        </div>
+        <div style="display:grid;grid-template-columns:300px 1fr;gap:24px;">
+          <!-- Profile Card -->
+          <div>
+            <div style="padding:28px;border-radius:20px;background:var(--bg-card);border:1px solid rgba(255,255,255,0.05);text-align:center;margin-bottom:16px;">
+              <div style="width:80px;height:80px;border-radius:50%;margin:0 auto 16px;overflow:hidden;border:3px solid var(--neon-cyan);box-shadow:0 0 20px rgba(0,245,255,0.3);">
+                <img src="https://i.pravatar.cc/200?img=11" style="width:100%;height:100%;object-fit:cover;"/>
+              </div>
+              <div style="font-size:18px;font-weight:700;margin-bottom:4px;">Nakul Sharma</div>
+              <div style="font-size:12px;color:var(--text-dim);margin-bottom:12px;">Lead Data Scientist</div>
+              <span class="chip chip-cyan">Pro Plan</span>
+              <div style="margin-top:20px;display:flex;flex-direction:column;gap:8px;">
+                <div style="display:flex;justify-content:space-between;font-size:12px;"><span style="color:var(--text-dim);">Email</span><span>nakul@nexus.ai</span></div>
+                <div style="display:flex;justify-content:space-between;font-size:12px;"><span style="color:var(--text-dim);">Joined</span><span>Jan 2024</span></div>
+                <div style="display:flex;justify-content:space-between;font-size:12px;"><span style="color:var(--text-dim);">Datasets</span><span>24 uploaded</span></div>
+                <div style="display:flex;justify-content:space-between;font-size:12px;"><span style="color:var(--text-dim);">Reports</span><span>47 generated</span></div>
+              </div>
+              <button onclick="showToast('Profile updated!')" style="margin-top:16px;width:100%;padding:10px;border-radius:10px;background:rgba(0,245,255,0.08);border:1px solid rgba(0,245,255,0.2);color:var(--neon-cyan);font-size:12px;font-weight:600;cursor:pointer;font-family:'Space Grotesk',sans-serif;">Edit Profile</button>
+            </div>
+          </div>
+          <!-- Settings Panels -->
+          <div>
+            <div class="settings-group">
+              <div class="settings-label">Notifications</div>
+              <div class="settings-row" onclick="toggleSetting(this)">
+                <div class="settings-row-left"><span class="settings-row-icon">📧</span><div><div class="settings-row-name">Email Reports</div><div class="settings-row-desc">Receive weekly analytics summaries</div></div></div>
+                <div class="toggle on"></div>
+              </div>
+              <div class="settings-row" onclick="toggleSetting(this)">
+                <div class="settings-row-left"><span class="settings-row-icon">🔔</span><div><div class="settings-row-name">AI Alerts</div><div class="settings-row-desc">Get notified on anomaly detection</div></div></div>
+                <div class="toggle on"></div>
+              </div>
+              <div class="settings-row" onclick="toggleSetting(this)">
+                <div class="settings-row-left"><span class="settings-row-icon">📱</span><div><div class="settings-row-name">Mobile Push</div><div class="settings-row-desc">Push notifications to mobile</div></div></div>
+                <div class="toggle"></div>
+              </div>
+            </div>
+            <div class="settings-group">
+              <div class="settings-label">AI Configuration</div>
+              <div class="settings-row" onclick="toggleSetting(this)">
+                <div class="settings-row-left"><span class="settings-row-icon">🧠</span><div><div class="settings-row-name">Auto AI Insights</div><div class="settings-row-desc">Generate insights on dataset upload</div></div></div>
+                <div class="toggle on"></div>
+              </div>
+              <div class="settings-row" onclick="toggleSetting(this)">
+                <div class="settings-row-left"><span class="settings-row-icon">🔮</span><div><div class="settings-row-name">Predictive Mode</div><div class="settings-row-desc">Enable ML forecasting models</div></div></div>
+                <div class="toggle on"></div>
+              </div>
+            </div>
+            <div class="settings-group">
+              <div class="settings-label">Integrations</div>
+              <div class="settings-row" onclick="showToast('Google Sheets integration active!')">
+                <div class="settings-row-left"><span class="settings-row-icon">📊</span><div><div class="settings-row-name">Google Sheets</div><div class="settings-row-desc">Sync data from Google Sheets</div></div></div>
+                <span class="chip chip-green" style="font-size:10px;">Connected</span>
+              </div>
+              <div class="settings-row" onclick="showToast('Connecting to Salesforce...')">
+                <div class="settings-row-left"><span class="settings-row-icon">☁</span><div><div class="settings-row-name">Salesforce</div><div class="settings-row-desc">Import CRM analytics</div></div></div>
+                <span class="chip chip-purple" style="font-size:10px;">Connect</span>
+              </div>
+              <div class="settings-row" onclick="showToast('Slack integration enabled!')">
+                <div class="settings-row-left"><span class="settings-row-icon">💬</span><div><div class="settings-row-name">Slack</div><div class="settings-row-desc">Share reports to Slack channels</div></div></div>
+                <span class="chip chip-green" style="font-size:10px;">Connected</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- end page-content -->
+  </div><!-- end main-content -->
+</section><!-- end dashboard -->
+
+<!-- ── AI CHATBOT ── -->
+<button class="chat-fab" id="chatFab" onclick="toggleChat()">🤖</button>
+
+<div class="chat-window" id="chatWindow">
+  <div class="chat-header">
+    <div class="chat-avatar">🤖</div>
+    <div>
+      <div class="chat-name">NEXUS AI Assistant</div>
+      <div class="chat-status">Ready · Claude Powered</div>
+    </div>
+    <button onclick="toggleChat()" style="margin-left:auto;background:none;border:none;color:var(--text-dim);font-size:18px;cursor:pointer;">✕</button>
+  </div>
+  <div class="chat-messages" id="chatMessages">
+    <div class="chat-msg msg-ai">
+      <div class="msg-bubble">Hello Nakul! 👋 I'm your NEXUS AI assistant powered by Claude. Ask me anything about your data, charts, forecasts, or business insights!</div>
+    </div>
+  </div>
+  <div class="chat-input-row">
+    <input class="chat-input" id="chatInput" placeholder="Ask about your analytics..." onkeydown="if(event.key==='Enter')sendMessage()"/>
+    <button class="chat-send" onclick="sendMessage()">↑</button>
+  </div>
+</div>
+
+<!-- KPI Detail Modal -->
+<div id="kpiModal" style="display:none;position:fixed;inset:0;z-index:300;background:rgba(0,0,0,0.7);backdrop-filter:blur(8px);align-items:center;justify-content:center;" onclick="closeModal()">
+  <div onclick="event.stopPropagation()" style="max-width:480px;width:90%;padding:32px;border-radius:24px;background:rgba(5,8,22,0.95);border:1px solid rgba(0,245,255,0.15);box-shadow:0 40px 120px rgba(0,0,0,0.5);">
+    <div style="font-size:11px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:var(--text-dim);margin-bottom:8px;" id="modalLabel"></div>
+    <div style="font-family:'Orbitron',monospace;font-size:40px;font-weight:900;color:var(--neon-cyan);margin-bottom:16px;" id="modalValue"></div>
+    <p style="font-size:14px;color:rgba(255,255,255,0.7);line-height:1.7;" id="modalText"></p>
+    <button onclick="closeModal()" style="margin-top:24px;padding:10px 24px;border-radius:10px;background:rgba(0,245,255,0.1);border:1px solid rgba(0,245,255,0.2);color:var(--neon-cyan);cursor:pointer;font-family:'Space Grotesk',sans-serif;font-size:13px;">Close</button>
+  </div>
+</div>
+
+<script>
+// ══════════════════════════════════════
+// PARTICLE BACKGROUND
+// ══════════════════════════════════════
+const canvas = document.getElementById('bgCanvas');
+const ctx = canvas.getContext('2d');
+let W = canvas.width = window.innerWidth;
+let H = canvas.height = window.innerHeight;
+const particles = [];
+for(let i=0;i<80;i++){
+  particles.push({
+    x:Math.random()*W,y:Math.random()*H,
+    vx:(Math.random()-0.5)*0.3,vy:(Math.random()-0.5)*0.3,
+    r:Math.random()*1.5+0.5,
+    a:Math.random()*0.5+0.1
+  });
+}
+function drawParticles(){
+  ctx.clearRect(0,0,W,H);
+  particles.forEach(p=>{
+    p.x+=p.vx;p.y+=p.vy;
+    if(p.x<0||p.x>W)p.vx*=-1;
+    if(p.y<0||p.y>H)p.vy*=-1;
+    ctx.beginPath();
+    ctx.arc(p.x,p.y,p.r,0,Math.PI*2);
+    ctx.fillStyle=`rgba(0,245,255,${p.a})`;
+    ctx.fill();
+  });
+  // draw connecting lines
+  particles.forEach((a,i)=>{
+    particles.slice(i+1).forEach(b=>{
+      const d=Math.hypot(a.x-b.x,a.y-b.y);
+      if(d<120){
+        ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);
+        ctx.strokeStyle=`rgba(0,245,255,${0.04*(1-d/120)})`;
+        ctx.lineWidth=0.5;ctx.stroke();
+      }
+    });
+  });
+  requestAnimationFrame(drawParticles);
+}
+drawParticles();
+window.addEventListener('resize',()=>{W=canvas.width=innerWidth;H=canvas.height=innerHeight;});
+
+// ══════════════════════════════════════
+// LOGIN
+// ══════════════════════════════════════
+document.getElementById('loginBtn').addEventListener('click',doLogin);
+document.getElementById('demoBtn').addEventListener('click',doLogin);
+
+function doLogin(){
+  const btn=document.getElementById('loginBtn');
+  const txt=document.getElementById('loginBtnText');
+  txt.innerHTML='<div class="spinner" style="margin:0 auto;border-top-color:#000;"></div>';
+  btn.style.pointerEvents='none';
+  setTimeout(()=>{
+    gsap.to('#loginPage',{opacity:0,scale:0.96,duration:0.6,ease:'power2.inOut',onComplete:()=>{
+      document.getElementById('loginPage').style.display='none';
+      const dash=document.getElementById('dashboard');
+      dash.classList.add('active');
+      gsap.from('.sidebar',{x:-60,opacity:0,duration:0.8,ease:'power3.out'});
+      gsap.from('.topbar',{y:-40,opacity:0,duration:0.6,delay:0.2,ease:'power3.out'});
+      gsap.from('.kpi-card',{y:40,opacity:0,stagger:0.1,duration:0.6,delay:0.4,ease:'power3.out'});
+      gsap.from('.chart-box',{y:30,opacity:0,stagger:0.1,duration:0.6,delay:0.7,ease:'power3.out'});
+      initDashboard();
+    }});
+  },1400);
+}
+
+// ══════════════════════════════════════
+// NAVIGATION
+// ══════════════════════════════════════
+function navigate(page,el){
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  el.classList.add('active');
+  document.querySelectorAll('.page-section').forEach(s=>s.classList.remove('active'));
+  const target=document.getElementById('page-'+page);
+  target.classList.add('active');
+  gsap.from(target,{opacity:0,y:20,duration:0.4,ease:'power2.out'});
+  initPage(page);
+}
+
+// ══════════════════════════════════════
+// CHART DEFAULTS
+// ══════════════════════════════════════
+Chart.defaults.color='rgba(255,255,255,0.4)';
+Chart.defaults.borderColor='rgba(255,255,255,0.04)';
+const NEON_CYAN='#00f5ff';
+const NEON_PURPLE='#b44fff';
+const NEON_GREEN='#00ff88';
+const NEON_ORANGE='#ff6b35';
+
+function gradientLine(ctx,color1,color2){
+  const g=ctx.createLinearGradient(0,0,0,260);
+  g.addColorStop(0,color1.replace(')',',0.3)').replace('rgb','rgba'));
+  g.addColorStop(1,'rgba(0,0,0,0)');
+  return g;
+}
+
+const chartInstances={};
+function makeChart(id,config){
+  if(chartInstances[id]){chartInstances[id].destroy();}
+  chartInstances[id]=new Chart(document.getElementById(id),config);
+  return chartInstances[id];
+}
+
+// ══════════════════════════════════════
+// INIT DASHBOARD
+// ══════════════════════════════════════
+function initDashboard(){
+  drawSparklines();
+  drawMainCharts();
+  startLiveFeed();
+  populateInsights();
+  populateTeam();
+  populateReports();
+  populateCollabFeed();
+}
+
+function initPage(page){
+  if(page==='analytics') drawAnalyticsCharts();
+  if(page==='forecasting') drawForecastCharts();
+  if(page==='team'){drawTeamChart();}
+}
+
+// ══════════════════════════════════════
+// SPARKLINES
+// ══════════════════════════════════════
+function drawSparklines(){
+  const configs=[
+    {id:'spark1',data:[180,220,190,260,240,290,248],color:NEON_CYAN},
+    {id:'spark2',data:[12,13.5,14,15,16.2,17.5,18.2],color:NEON_PURPLE},
+    {id:'spark3',data:[2.8,3.0,3.1,3.3,3.5,3.6,3.8],color:NEON_GREEN},
+    {id:'spark4',data:[90,92,89,93,95,96,98],color:NEON_ORANGE},
+  ];
+  configs.forEach(c=>{
+    const cvs=document.getElementById(c.id);
+    if(!cvs)return;
+    const cx=cvs.getContext('2d');
+    const g=cx.createLinearGradient(0,0,0,40);
+    g.addColorStop(0,c.color+'44');g.addColorStop(1,'transparent');
+    makeChart(c.id,{
+      type:'line',
+      data:{labels:Array(7).fill(''),datasets:[{data:c.data,borderColor:c.color,borderWidth:2,fill:true,backgroundColor:g,tension:0.4,pointRadius:0}]},
+      options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{display:false},y:{display:false}},animation:{duration:1500}}
+    });
+  });
+}
+
+// ══════════════════════════════════════
+// MAIN CHARTS
+// ══════════════════════════════════════
+function drawMainCharts(){
+  const lineCtx=document.getElementById('mainLineChart');
+  if(lineCtx){
+    const g=lineCtx.getContext('2d').createLinearGradient(0,0,0,260);
+    g.addColorStop(0,'rgba(0,245,255,0.25)');g.addColorStop(1,'rgba(0,245,255,0)');
+    makeChart('mainLineChart',{
+      type:'line',
+      data:{
+        labels:['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'],
+        datasets:[
+          {label:'Revenue 2024',data:[180,210,190,240,220,280,260,310,290,340,320,380],borderColor:NEON_CYAN,backgroundColor:g,fill:true,tension:0.4,borderWidth:2.5,pointRadius:4,pointBackgroundColor:NEON_CYAN},
+          {label:'Revenue 2023',data:[140,160,150,180,170,200,190,220,210,250,230,280],borderColor:'rgba(180,79,255,0.6)',backgroundColor:'transparent',fill:false,tension:0.4,borderWidth:1.5,borderDash:[4,4],pointRadius:0}
+        ]
+      },
+      options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:'rgba(255,255,255,0.5)',boxWidth:12,boxHeight:2,padding:20}}},scales:{x:{grid:{color:'rgba(255,255,255,0.03)'}},y:{grid:{color:'rgba(255,255,255,0.03)'}}},animation:{duration:1500,easing:'easeOutQuart'}}
+    });
+  }
+
+  const donut=document.getElementById('mainDonutChart');
+  if(donut){
+    makeChart('mainDonutChart',{
+      type:'doughnut',
+      data:{
+        labels:['Enterprise','SMB','Startup','Other'],
+        datasets:[{data:[42,31,18,9],backgroundColor:[NEON_CYAN,'rgba(180,79,255,0.8)',NEON_GREEN,'rgba(255,107,53,0.8)'],borderColor:'rgba(0,0,0,0)',borderWidth:0,hoverOffset:8}]
+      },
+      options:{responsive:true,maintainAspectRatio:false,cutout:'72%',plugins:{legend:{position:'right',labels:{color:'rgba(255,255,255,0.6)',padding:16,boxWidth:10,boxHeight:10}}},animation:{animateRotate:true,duration:1500}}
+    });
+  }
+
+  const bar=document.getElementById('barChart');
+  if(bar){
+    makeChart('barChart',{
+      type:'bar',
+      data:{
+        labels:['Organic','Paid','Referral','Social','Email'],
+        datasets:[{label:'Users',data:[4200,3100,2400,1800,1100],backgroundColor:[NEON_CYAN+'99','rgba(180,79,255,0.6)',NEON_GREEN+'99','rgba(255,107,53,0.6)','rgba(255,255,255,0.2)'],borderRadius:8,borderSkipped:false}]
+      },
+      options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{grid:{display:false}},y:{grid:{color:'rgba(255,255,255,0.03)'}}},animation:{duration:1500,delay:(ctx)=>ctx.dataIndex*100}}
+    });
+  }
+}
+
+// ══════════════════════════════════════
+// ANALYTICS CHARTS
+// ══════════════════════════════════════
+function drawAnalyticsCharts(){
+  const trend=document.getElementById('analyticsTrend');
+  if(trend && !chartInstances['analyticsTrend']){
+    const g=trend.getContext('2d').createLinearGradient(0,0,0,260);
+    g.addColorStop(0,'rgba(0,245,255,0.2)');g.addColorStop(1,'rgba(0,245,255,0)');
+    const g2=trend.getContext('2d').createLinearGradient(0,0,0,260);
+    g2.addColorStop(0,'rgba(180,79,255,0.2)');g2.addColorStop(1,'rgba(180,79,255,0)');
+    makeChart('analyticsTrend',{
+      type:'line',
+      data:{
+        labels:['W1','W2','W3','W4','W5','W6','W7','W8','W9','W10','W11','W12'],
+        datasets:[
+          {label:'Actual',data:[200,230,215,260,245,290,275,320,305,350,335,380],borderColor:NEON_CYAN,backgroundColor:g,fill:true,tension:0.4,borderWidth:2,pointRadius:3},
+          {label:'Predicted',data:[null,null,null,null,null,null,null,null,305,355,345,390],borderColor:NEON_PURPLE,backgroundColor:g2,fill:true,tension:0.4,borderWidth:2,borderDash:[6,3],pointRadius:3}
+        ]
+      },
+      options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:'rgba(255,255,255,0.5)',boxWidth:12}}},scales:{x:{grid:{color:'rgba(255,255,255,0.03)'}},y:{grid:{color:'rgba(255,255,255,0.03)'}}}}
+    });
+  }
+
+  const radar=document.getElementById('radarChart');
+  if(radar && !chartInstances['radarChart']){
+    makeChart('radarChart',{
+      type:'radar',
+      data:{
+        labels:['Revenue','Growth','Retention','NPS','Efficiency','AI Score'],
+        datasets:[
+          {label:'Current',data:[88,76,92,84,78,98],borderColor:NEON_CYAN,backgroundColor:'rgba(0,245,255,0.1)',borderWidth:2,pointBackgroundColor:NEON_CYAN},
+          {label:'Target',data:[95,90,95,90,90,100],borderColor:NEON_PURPLE,backgroundColor:'rgba(180,79,255,0.06)',borderWidth:1.5,borderDash:[4,4],pointBackgroundColor:NEON_PURPLE}
+        ]
+      },
+      options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:'rgba(255,255,255,0.5)',boxWidth:10}}},scales:{r:{grid:{color:'rgba(255,255,255,0.06)'},pointLabels:{color:'rgba(255,255,255,0.6)'},ticks:{display:false}}}}
+    });
+  }
+
+  const scatter=document.getElementById('scatterChart');
+  if(scatter && !chartInstances['scatterChart']){
+    const pts=Array.from({length:30},()=>({x:Math.random()*20,y:Math.random()*400+50}));
+    makeChart('scatterChart',{
+      type:'scatter',
+      data:{datasets:[{label:'Revenue vs Users',data:pts,backgroundColor:NEON_CYAN+'88',pointRadius:6,pointHoverRadius:9}]},
+      options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{title:{display:true,text:'Users (K)',color:'rgba(255,255,255,0.4)'},grid:{color:'rgba(255,255,255,0.03)'}},y:{title:{display:true,text:'Revenue ($K)',color:'rgba(255,255,255,0.4)'},grid:{color:'rgba(255,255,255,0.03)'}}}}
+    });
+  }
+}
+
+// ══════════════════════════════════════
+// FORECAST CHARTS
+// ══════════════════════════════════════
+function drawForecastCharts(){
+  const fc=document.getElementById('forecastChart');
+  if(fc && !chartInstances['forecastChart']){
+    const g=fc.getContext('2d').createLinearGradient(0,0,0,260);
+    g.addColorStop(0,'rgba(0,245,255,0.25)');g.addColorStop(1,'rgba(0,245,255,0)');
+    makeChart('forecastChart',{
+      type:'line',
+      data:{
+        labels:['Now','Jan','Feb','Mar','Apr','May','Jun'],
+        datasets:[
+          {label:'Historical',data:[248,null,null,null,null,null,null],borderColor:NEON_CYAN,backgroundColor:g,fill:true,tension:0.4,borderWidth:2.5,pointRadius:5,pointBackgroundColor:NEON_CYAN},
+          {label:'Forecast',data:[248,265,278,290,305,320,312],borderColor:NEON_PURPLE,backgroundColor:'rgba(180,79,255,0.08)',fill:true,tension:0.4,borderWidth:2,borderDash:[6,4],pointRadius:4,pointBackgroundColor:NEON_PURPLE},
+          {label:'Bull Case',data:[248,280,298,315,335,360,380],borderColor:NEON_GREEN+'88',backgroundColor:'transparent',tension:0.4,borderWidth:1,borderDash:[3,3],pointRadius:0},
+          {label:'Bear Case',data:[248,248,255,262,270,278,285],borderColor:NEON_ORANGE+'88',backgroundColor:'transparent',tension:0.4,borderWidth:1,borderDash:[3,3],pointRadius:0}
+        ]
+      },
+      options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:'rgba(255,255,255,0.5)',boxWidth:12}}},scales:{x:{grid:{color:'rgba(255,255,255,0.03)'}},y:{grid:{color:'rgba(255,255,255,0.03)'}}}}
+    });
+  }
+
+  const sc=document.getElementById('scenarioChart');
+  if(sc && !chartInstances['scenarioChart']){
+    makeChart('scenarioChart',{
+      type:'bar',
+      data:{
+        labels:['Base','Optimistic','Pessimistic','Disruption'],
+        datasets:[{label:'6M Forecast ($K)',data:[312,380,285,220],backgroundColor:[NEON_CYAN+'99',NEON_GREEN+'99',NEON_ORANGE+'99','rgba(255,77,106,0.7)'],borderRadius:8,borderSkipped:false}]
+      },
+      options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{grid:{display:false}},y:{grid:{color:'rgba(255,255,255,0.03)'}}}}
+    });
+  }
+}
+
+// ══════════════════════════════════════
+// TEAM CHART
+// ══════════════════════════════════════
+function drawTeamChart(){
+  const tc=document.getElementById('teamChart');
+  if(tc && !chartInstances['teamChart']){
+    makeChart('teamChart',{
+      type:'bar',
+      data:{
+        labels:['Mon','Tue','Wed','Thu','Fri','Sat','Sun'],
+        datasets:[
+          {label:'Nakul',data:[8,12,6,14,10,4,2],backgroundColor:NEON_CYAN+'88',borderRadius:6},
+          {label:'Priya',data:[6,8,10,8,12,6,3],backgroundColor:NEON_PURPLE+'88',borderRadius:6},
+          {label:'Arjun',data:[10,6,8,12,8,5,1],backgroundColor:NEON_GREEN+'88',borderRadius:6}
+        ]
+      },
+      options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:'rgba(255,255,255,0.5)',boxWidth:10}}},scales:{x:{grid:{display:false},stacked:false},y:{grid:{color:'rgba(255,255,255,0.03)'}}}}
+    });
+  }
+}
+
+// ══════════════════════════════════════
+// AI INSIGHTS
+// ══════════════════════════════════════
+const insightsData=[
+  {icon:'📈',title:'Revenue Surge Detected',text:'Revenue grew 18.4% MoM. Enterprise deals are the primary driver with 3 new Fortune 500 clients onboarded.',score:94,color:NEON_CYAN},
+  {icon:'👥',title:'User Retention Improving',text:'30-day retention rate increased from 68% to 76%. Onboarding improvements show measurable impact.',score:87,color:NEON_GREEN},
+  {icon:'⚡',title:'Conversion Opportunity',text:'Mobile funnel has 23% higher drop-off vs desktop. Fixing the checkout UX could yield +$42K revenue.',score:91,color:NEON_PURPLE},
+  {icon:'🚨',title:'Anomaly: Weekend Traffic Spike',text:'Saturday traffic increased 340% unexpectedly. Possible viral content or external referral surge.',score:78,color:NEON_ORANGE},
+  {icon:'🔮',title:'Q1 Forecast: Bullish',text:'Based on current trajectory, Q1 revenue will exceed $320K with 94% model confidence.',score:94,color:NEON_CYAN},
+  {icon:'💡',title:'Cost Optimization Signal',text:'Infrastructure costs can be reduced 12% by switching to reserved capacity. Estimated savings: $8.4K/mo.',score:83,color:NEON_GREEN},
+];
+
+function populateInsights(){
+  const grid=document.getElementById('insightsGrid');
+  if(!grid)return;
+  grid.innerHTML=insightsData.map((ins,i)=>`
+    <div class="insight-card" onclick="showToast('${ins.title}: See full details in reports.')" style="animation-delay:${i*0.1}s;">
+      <div class="insight-icon">${ins.icon}</div>
+      <div class="insight-title">${ins.title}</div>
+      <div class="insight-text">${ins.text}</div>
+      <div class="insight-score">
+        <div class="score-bar"><div class="score-fill" style="width:${ins.score}%;"></div></div>
+        <span class="score-val">${ins.score}%</span>
+      </div>
+    </div>
+  `).join('');
+
+  const cc=document.getElementById('confidenceChart');
+  if(cc && !chartInstances['confidenceChart']){
+    const g=cc.getContext('2d').createLinearGradient(0,0,0,200);
+    g.addColorStop(0,'rgba(0,245,255,0.2)');g.addColorStop(1,'rgba(0,245,255,0)');
+    makeChart('confidenceChart',{
+      type:'line',
+      data:{
+        labels:['6h ago','5h','4h','3h','2h','1h','Now'],
+        datasets:[{label:'AI Confidence',data:[82,85,78,88,91,94,98],borderColor:NEON_CYAN,backgroundColor:g,fill:true,tension:0.4,borderWidth:2,pointRadius:4,pointBackgroundColor:NEON_CYAN}]
+      },
+      options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{grid:{color:'rgba(255,255,255,0.03)'}},y:{min:60,max:100,grid:{color:'rgba(255,255,255,0.03)'}}}}
+    });
+  }
+}
+
+// ══════════════════════════════════════
+// LIVE FEED
+// ══════════════════════════════════════
+const feedEvents=[
+  {text:'New enterprise signup: Acme Corp · $12,400 ARR',color:NEON_GREEN},
+  {text:'AI detected revenue anomaly — investigating...',color:NEON_ORANGE},
+  {text:'Dataset analysis completed: Q4_sales.xlsx',color:NEON_CYAN},
+  {text:'User milestone: 18,000 active users reached!',color:NEON_PURPLE},
+  {text:'API integration: Salesforce sync successful',color:NEON_GREEN},
+  {text:'Forecast model retrained — accuracy: 96.2%',color:NEON_CYAN},
+  {text:'Priya exported Q3 performance report',color:'rgba(255,255,255,0.4)'},
+  {text:'Payment processed: $4,200 from TechStart Inc.',color:NEON_GREEN},
+];
+let feedIdx=0;
+function startLiveFeed(){
+  const feed=document.getElementById('liveFeed');
+  if(!feed)return;
+  feed.innerHTML='';
+  const addItem=()=>{
+    const ev=feedEvents[feedIdx%feedEvents.length];
+    feedIdx++;
+    const now=new Date();
+    const time=`${now.getHours()}:${String(now.getMinutes()).padStart(2,'0')}:${String(now.getSeconds()).padStart(2,'0')}`;
+    const el=document.createElement('div');
+    el.className='feed-item';
+    el.innerHTML=`<div class="feed-dot" style="background:${ev.color};box-shadow:0 0 6px ${ev.color};"></div><div><div class="feed-text">${ev.text}</div><div class="feed-time">${time}</div></div>`;
+    feed.insertBefore(el,feed.firstChild);
+    if(feed.children.length>8)feed.lastChild.remove();
+  };
+  addItem();
+  setInterval(addItem,3500);
+}
+
+// ══════════════════════════════════════
+// TEAM
+// ══════════════════════════════════════
+const teamData=[
+  {name:'Nakul Sharma',role:'Lead Data Scientist',img:'11',online:true},
+  {name:'Priya Patel',role:'Analytics Engineer',img:'5',online:true},
+  {name:'Arjun Mehta',role:'ML Engineer',img:'8',online:false},
+  {name:'Sara Kim',role:'Business Analyst',img:'9',online:true},
+];
+function populateTeam(){
+  const grid=document.getElementById('teamGrid');
+  if(!grid)return;
+  grid.innerHTML=teamData.map(m=>`
+    <div class="team-card" onclick="showToast('Viewing ${m.name}\\'s profile...')">
+      <div class="team-avatar"><img src="https://i.pravatar.cc/100?img=${m.img}" alt="${m.name}"/></div>
+      <div class="team-name">${m.name}</div>
+      <div class="team-role">${m.role}</div>
+      ${m.online?'<div class="online-badge">Online</div>':'<div style="font-size:11px;color:var(--text-dim);">Away</div>'}
+    </div>
+  `).join('');
+}
+
+// ══════════════════════════════════════
+// COLLAB FEED
+// ══════════════════════════════════════
+function populateCollabFeed(){
+  const f=document.getElementById('collabFeed');
+  if(!f)return;
+  const events=[
+    {user:'Priya',action:'exported Q4 Sales Report',time:'2m ago',color:NEON_PURPLE},
+    {user:'Nakul',action:'uploaded new dataset: customer_data.csv',time:'18m ago',color:NEON_CYAN},
+    {user:'Arjun',action:'updated ML forecasting model',time:'1h ago',color:NEON_GREEN},
+    {user:'Sara',action:'shared dashboard with stakeholders',time:'2h ago',color:NEON_ORANGE},
+  ];
+  f.innerHTML=events.map(e=>`
+    <div class="feed-item">
+      <div class="feed-dot" style="background:${e.color};"></div>
+      <div><div class="feed-text"><strong style="color:#fff;">${e.user}</strong> ${e.action}</div><div class="feed-time">${e.time}</div></div>
+    </div>
+  `).join('');
+}
+
+// ══════════════════════════════════════
+// REPORTS
+// ══════════════════════════════════════
+const reportsData=[
+  {icon:'📊',name:'Q4 Revenue Analysis',meta:'Generated Dec 28 · 24 pages · PDF',type:'Revenue'},
+  {icon:'👥',name:'Customer Cohort Analysis',meta:'Generated Dec 25 · 18 pages · PDF',type:'Users'},
+  {icon:'🔮',name:'2025 Growth Forecast',meta:'Generated Dec 20 · 32 pages · PDF',type:'Forecast'},
+  {icon:'🌍',name:'Regional Performance Report',meta:'Generated Dec 15 · 15 pages · PDF',type:'Regional'},
+  {icon:'⚡',name:'Conversion Funnel Audit',meta:'Generated Dec 10 · 12 pages · PDF',type:'Conversions'},
+];
+function populateReports(){
+  const list=document.getElementById('reportsList');
+  if(!list)return;
+  list.innerHTML=reportsData.map(r=>`
+    <div class="report-card">
+      <div class="report-icon-wrap">${r.icon}</div>
+      <div class="report-info">
+        <div class="report-name">${r.name}</div>
+        <div class="report-meta">${r.meta}</div>
+      </div>
+      <span class="chip chip-cyan" style="font-size:10px;">${r.type}</span>
+      <button class="report-btn" onclick="showToast('Downloading: ${r.name}...')">↓ Export</button>
+    </div>
+  `).join('');
+}
+
+// ══════════════════════════════════════
+// FILE UPLOAD + CHARTS
+// ══════════════════════════════════════
+const zone=document.getElementById('uploadZone');
+zone.addEventListener('dragover',e=>{e.preventDefault();zone.classList.add('drag-over');});
+zone.addEventListener('dragleave',()=>zone.classList.remove('drag-over'));
+zone.addEventListener('drop',e=>{e.preventDefault();zone.classList.remove('drag-over');const f=e.dataTransfer.files[0];if(f)processFile(f);});
+
+function handleFile(e){processFile(e.target.files[0]);}
+
+function processFile(file){
+  if(!file)return;
+  showToast('Processing dataset: '+file.name);
+  const isCSV=file.name.endsWith('.csv');
+  const reader=new FileReader();
+  reader.onload=evt=>{
+    let json;
+    if(isCSV){
+      const result=Papa.parse(evt.target.result,{header:true,skipEmptyLines:true});
+      json=result.data;
+    } else {
+      const wb=XLSX.read(evt.target.result,{type:'binary'});
+      json=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]]);
+    }
+    renderDataPreview(json,file.name);
+  };
+  isCSV?reader.readAsText(file):reader.readAsBinaryString(file);
+}
+
+function renderDataPreview(data,fname){
+  if(!data||!data.length)return;
+  const section=document.getElementById('dataPreviewSection');
+  section.style.display='block';
+  document.getElementById('datasetTitle').textContent='📂 '+fname;
+
+  const keys=Object.keys(data[0]);
+  const stats=document.getElementById('dataStats');
+  stats.innerHTML=`
+    <span class="chip chip-cyan">${data.length} rows</span>
+    <span class="chip chip-purple">${keys.length} columns</span>
+    <span class="chip chip-green">AI Ready</span>
+  `;
+
+  // Table
+  let html=`<table class="data-table"><thead><tr>${keys.map(k=>`<th>${k}</th>`).join('')}</tr></thead><tbody>`;
+  data.slice(0,8).forEach(row=>{html+=`<tr>${keys.map(k=>`<td>${row[k]??''}</td>`).join('')}</tr>`;});
+  html+=`</tbody></table>`;
+  document.getElementById('tableContainer').innerHTML=html;
+
+  // Auto-detect numeric columns
+  const numericCols=keys.filter(k=>!isNaN(parseFloat(data[0][k])));
+  const labelCol=keys.find(k=>isNaN(parseFloat(data[0][k])))||keys[0];
+  const labels=data.slice(0,12).map(r=>String(r[labelCol]).substring(0,10));
+  const col1=numericCols[0]||keys[1];
+  const col2=numericCols[1]||numericCols[0]||keys[1];
+  const vals1=data.slice(0,12).map(r=>parseFloat(r[col1])||0);
+  const vals2=data.slice(0,12).map(r=>parseFloat(r[col2])||0);
+
+  // Line chart
+  const lCtx=document.getElementById('uploadLineChart');
+  const g=lCtx.getContext('2d').createLinearGradient(0,0,0,220);
+  g.addColorStop(0,'rgba(0,245,255,0.25)');g.addColorStop(1,'rgba(0,245,255,0)');
+  makeChart('uploadLineChart',{
+    type:'line',
+    data:{labels,datasets:[{label:col1,data:vals1,borderColor:NEON_CYAN,backgroundColor:g,fill:true,tension:0.4,borderWidth:2,pointRadius:3,pointBackgroundColor:NEON_CYAN}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:'rgba(255,255,255,0.5)'}}},scales:{x:{ticks:{maxRotation:30},grid:{color:'rgba(255,255,255,0.03)'}},y:{grid:{color:'rgba(255,255,255,0.03)'}}}}
+  });
+
+  // Bar chart
+  makeChart('uploadBarChart',{
+    type:'bar',
+    data:{labels,datasets:[{label:col2,data:vals2,backgroundColor:NEON_PURPLE+'99',borderRadius:6,borderSkipped:false}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:'rgba(255,255,255,0.5)'}}},scales:{x:{ticks:{maxRotation:30},grid:{display:false}},y:{grid:{color:'rgba(255,255,255,0.03)'}}}}
+  });
+
+  // Area chart for all numeric cols
+  const allDatasets=numericCols.slice(0,4).map((col,i)=>{
+    const colors=[NEON_CYAN,NEON_PURPLE,NEON_GREEN,NEON_ORANGE];
+    return{label:col,data:data.slice(0,12).map(r=>parseFloat(r[col])||0),borderColor:colors[i],backgroundColor:colors[i]+'20',fill:true,tension:0.4,borderWidth:1.5,pointRadius:0};
+  });
+  makeChart('uploadAreaChart',{
+    type:'line',
+    data:{labels,datasets:allDatasets},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:'rgba(255,255,255,0.5)',boxWidth:10}}},scales:{x:{ticks:{maxRotation:30},grid:{color:'rgba(255,255,255,0.03)'}},y:{grid:{color:'rgba(255,255,255,0.03)'}}}}
+  });
+
+  // AI Summary
+  const totalVal=vals1.reduce((a,b)=>a+b,0);
+  const maxVal=Math.max(...vals1);
+  const minVal=Math.min(...vals1);
+  const trend=vals1[vals1.length-1]>vals1[0]?'upward 📈':'downward 📉';
+  document.getElementById('aiSummary').innerHTML=`
+    Dataset <strong>${fname}</strong> contains <strong>${data.length} records</strong> across <strong>${keys.length} columns</strong>.<br>
+    Detected <strong>${numericCols.length} numeric</strong> and <strong>${keys.length-numericCols.length} categorical</strong> fields.<br><br>
+    <strong>Key column — ${col1}:</strong> Total = ${totalVal.toFixed(0)} · Max = ${maxVal.toFixed(0)} · Min = ${minVal.toFixed(0)}<br>
+    Trend direction: <strong>${trend}</strong><br><br>
+    🤖 <em>AI Recommendation:</em> This dataset shows a ${trend} trend in ${col1}. Consider filtering by ${labelCol} for deeper segmentation. 
+    ${numericCols.length>1?`Cross-correlation between ${col1} and ${col2} may reveal additional insights.`:''}
+  `;
+
+  gsap.from('#dataPreviewSection',{opacity:0,y:20,duration:0.6,ease:'power2.out'});
+  showToast('✅ Dataset analyzed successfully!');
+}
+
+// ══════════════════════════════════════
+// CHATBOT WITH CLAUDE API
+// ══════════════════════════════════════
+let chatOpen=false;
+const chatHistory=[];
+
+function toggleChat(){
+  chatOpen=!chatOpen;
+  document.getElementById('chatWindow').classList.toggle('open',chatOpen);
+}
+
+function sendMessage(){
+  const input=document.getElementById('chatInput');
+  const msg=input.value.trim();
+  if(!msg)return;
+  input.value='';
+  appendMsg(msg,'user');
+  chatHistory.push({role:'user',content:msg});
+  showTyping();
+  callClaude(msg);
+}
+
+function appendMsg(text,role){
+  const msgs=document.getElementById('chatMessages');
+  const div=document.createElement('div');
+  div.className=`chat-msg msg-${role}`;
+  div.innerHTML=`<div class="msg-bubble">${text}</div>`;
+  msgs.appendChild(div);
+  msgs.scrollTop=msgs.scrollHeight;
+}
+
+let typingEl=null;
+function showTyping(){
+  const msgs=document.getElementById('chatMessages');
+  typingEl=document.createElement('div');
+  typingEl.className='chat-msg msg-ai';
+  typingEl.innerHTML=`<div class="msg-bubble"><div class="typing-indicator"><div class="typing-dot"></div><div class="typing-dot"></div><div class="typing-dot"></div></div></div>`;
+  msgs.appendChild(typingEl);
+  msgs.scrollTop=msgs.scrollHeight;
+}
+function removeTyping(){if(typingEl){typingEl.remove();typingEl=null;}}
+
+async function callClaude(userMsg){
+  const systemPrompt=`You are NEXUS AI, a smart analytics assistant built into an enterprise data platform. You help users understand their sales data, analytics metrics, charts, and business insights. Be concise (2-3 sentences max), data-focused, and professional. If the user asks about their data or charts, give specific actionable insights. Current dashboard metrics: Revenue $248K (+18.4%), Users 18.2K (+24%), Conversion 3.8%, AI Score 98/100.`;
+  try{
+    const res=await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        model:'claude-sonnet-4-20250514',
+        max_tokens:1000,
+        system:systemPrompt,
+        messages:chatHistory
+      })
+    });
+    const data=await res.json();
+    removeTyping();
+    const reply=data.content?.[0]?.text||'Unable to get response. Please try again.';
+    appendMsg(reply,'ai');
+    chatHistory.push({role:'assistant',content:reply});
+  }catch(err){
+    removeTyping();
+    appendMsg('I can help you analyze your data! Your revenue is up 18.4% this month, driven by enterprise deals. What specific metric would you like to explore?','ai');
+  }
+}
+
+// ══════════════════════════════════════
+// MODALS & TOASTS
+// ══════════════════════════════════════
+function showKPIDetail(label,value,text){
+  document.getElementById('modalLabel').textContent=label;
+  document.getElementById('modalValue').textContent=value;
+  document.getElementById('modalText').textContent=text;
+  const modal=document.getElementById('kpiModal');
+  modal.style.display='flex';
+  gsap.from(modal.querySelector('div'),{scale:0.9,opacity:0,duration:0.35,ease:'back.out(1.5)'});
+}
+function closeModal(){
+  const modal=document.getElementById('kpiModal');
+  gsap.to(modal.querySelector('div'),{scale:0.9,opacity:0,duration:0.2,onComplete:()=>modal.style.display='none'});
+}
+
+let toastTimer;
+function showToast(msg){
+  const t=document.getElementById('toast');
+  t.innerHTML=`✓ ${msg}`;
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer=setTimeout(()=>t.classList.remove('show'),3500);
+}
+
+// ══════════════════════════════════════
+// SETTINGS TOGGLE
+// ══════════════════════════════════════
+function toggleSetting(row){
+  const toggle=row.querySelector('.toggle');
+  if(toggle){
+    toggle.classList.toggle('on');
+    showToast(toggle.classList.contains('on')?'Setting enabled':'Setting disabled');
+  }
+}
+
+// ══════════════════════════════════════
+// SEARCH
+// ══════════════════════════════════════
+document.getElementById('searchInput').addEventListener('input',function(){
+  const q=this.value.toLowerCase();
+  if(q.length>2){
+    showToast(`Searching for "${q}"...`);
+  }
+});
+</script>
+</body>
+</html>
